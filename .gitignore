@@ -19,3 +19,4 @@ Thumbs.db
 *.pt
 *.bin
 models/
+bert_results.json
