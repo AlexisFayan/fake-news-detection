@@ -1,0 +1,21 @@
+# Dossiers de données (téléchargés automatiquement)
+data/
+liar_dataset/
+
+# Environnement Python
+venv/
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Modèles entraînés
+*.pkl
+*.pt
+*.bin
+models/
