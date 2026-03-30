@@ -1,78 +1,100 @@
-# Détection de Fake News Politiques
+# 🔍 Détection de Fake News Politiques
 
-Projet Master Data Science — 2026
+**Projet 3 — Module Data Science & Business Intelligence**  
+Master 2 Epitech — Mars 2026
 
-## Description
+---
 
-Ce projet explore les capacités du NLP et du Machine Learning pour détecter automatiquement les déclarations politiques trompeuses. Il utilise le **LIAR Dataset** (~12 800 déclarations politiques annotées) et évalue la généralisation sur le **BuzzFeed Political News Dataset**.
+## 👥 Groupe 2
 
-## Structure du projet
+| Membre |
+|--------|
+| Alexis FAYAN |
+| Yassin CHAAIRATE |
+| Jacqueline MARIANADIN |
+| Ethan HARY |
+| Aissatou-Blondin DIOP |
 
-```
-fake-news-detection/
-├── README.md                    # Ce fichier
-├── requirements.txt             # Dépendances Python
-└── fake_news_detection.ipynb    # Notebook principal (complet)
-```
+---
 
-## Installation
+## 📋 Description
+
+Ce projet explore la détection automatique de **fake news politiques** à l'aide de techniques NLP et Machine Learning.
+
+- **Dataset principal :** [LIAR Dataset](https://github.com/tfs4/liar_dataset) (~12 800 déclarations politiques annotées par PolitiFact)
+- **Dataset externe :** [BuzzFeed Political News Dataset](https://github.com/BuzzFeedNews/2016-10-facebook-fact-check) (test de généralisation)
+
+**Objectif :** Classifier des déclarations politiques selon leur véracité, puis évaluer la capacité de généralisation du modèle sur des données jamais vues.
+
+---
+
+## 🚀 Installation
 
 ```bash
+# Cloner le repo
+git clone https://github.com/AlexisFayan/fake-news-detection.git
+cd fake-news-detection
+
 # Créer un environnement virtuel (recommandé)
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
+source venv/bin/activate  # Mac/Linux
 # venv\Scripts\activate   # Windows
 
 # Installer les dépendances
 pip install -r requirements.txt
 ```
 
-## Utilisation
+## ▶️ Utilisation
 
 ```bash
 jupyter notebook fake_news_detection.ipynb
 ```
 
-Le notebook est entièrement auto-contenu : il télécharge automatiquement les datasets nécessaires. Exécutez les cellules de haut en bas.
+> Le notebook est **auto-contenu** : il télécharge automatiquement les datasets. Exécutez les cellules de haut en bas.
 
-### Option BERT
+---
 
-Par défaut, le fine-tuning BERT est désactivé (`TRAIN_BERT = False`) car il nécessite un GPU. Pour l'activer, modifiez la variable dans la première cellule de code du notebook.
+## 📓 Structure du Notebook
 
-## Contenu du notebook
+| # | Section | Contenu |
+|---|---------|---------|
+| 1 | Introduction & Setup | Imports, téléchargement automatique des données |
+| 2 | Exploration (EDA) | Distribution des labels, speakers, partis, wordclouds |
+| 3 | Prétraitement | Nettoyage NLP, mapping binaire (fake/real), analyse déséquilibre |
+| 4 | Feature Engineering | TF-IDF (unigrams + bigrams, 10 000 features) |
+| 5 | Modélisation Classique | Logistic Regression, Random Forest, XGBoost |
+| 6 | Importance des Features | SHAP values, mots les plus discriminants |
+| 7 | BERT (optionnel) | Fine-tuning bert-base-uncased |
+| 8 | Out-of-Domain | Test sur BuzzFeed, analyse du domain shift |
+| 9 | Biais & Fairness | Performance par affiliation politique |
+| 10 | Conclusion | Réponses aux questions, limites, pistes d'amélioration |
 
-| Section | Description |
-|---------|-------------|
-| 1 | Introduction & Setup |
-| 2 | Exploration des données (EDA) |
-| 3 | Prétraitement NLP |
-| 4 | Feature Engineering (TF-IDF) |
-| 5 | Modélisation classique (LR, RF, XGBoost) |
-| 6 | Analyse d'importance des features (SHAP) |
-| 7 | Modèle avancé : BERT (optionnel) |
-| 8 | Évaluation Out-of-Domain |
-| 9 | Analyse de biais et fairness |
-| 10 | Discussion & Conclusion |
+### ⚠️ Note sur BERT
+Le fine-tuning BERT est désactivé par défaut (`TRAIN_BERT = False`) car il nécessite un GPU. Pour l'activer, modifiez la variable dans la Section 1 du notebook.
 
-## Datasets
+---
 
-- **LIAR Dataset** (Wang, 2017) — 6 labels de véracité : pants-fire, false, barely-true, half-true, mostly-true, true
-- **BuzzFeed Political News Dataset** — articles politiques annotés (test de généralisation)
+## 🗂️ Structure du Projet
 
-## Modèles implémentés
+```
+fake-news-detection/
+├── README.md                     # Ce fichier
+├── requirements.txt              # Dépendances Python
+└── fake_news_detection.ipynb     # Notebook principal
+```
 
-- Logistic Regression (TF-IDF)
-- Random Forest (TF-IDF)
-- XGBoost (TF-IDF)
-- BERT fine-tuné (optionnel)
+---
 
-## Résultats attendus
+## 📅 Calendrier
 
-| Modèle | Accuracy | F1 (macro) |
-|--------|----------|------------|
-| Logistic Regression | ~0.61 | ~0.61 |
-| Random Forest | ~0.59 | ~0.58 |
-| XGBoost | ~0.60 | ~0.60 |
-| BERT | ~0.64 | ~0.63 |
+| Date | Événement |
+|------|-----------|
+| 3 avril 2026 | Follow-up (Groupe 2 : 11h00) |
+| 17 avril 2026 | Soutenance (Groupe 2 : 14h30) |
 
-> Note : Le LIAR dataset est notoirement difficile. Même les modèles SOTA atteignent ~67% d'accuracy en classification binaire.
+---
+
+## 📚 Références
+
+- Wang, W. Y. (2017). *"Liar, Liar Pants on Fire": A New Benchmark Dataset for Fake News Detection.* ACL 2017.
+- Silverman, C. (2016). *BuzzFeed News — Facebook Fact-Check Dataset.*
