@@ -140,6 +140,19 @@ Si BERT a déjà été entraîné, les résultats sont sauvegardés dans `bert_r
 
 ---
 
+## 📊 Présentation Follow-Up
+
+<p align="center">
+  <img src="slides/slide_1.png" alt="Slide 1 — Titre" width="90%"><br><br>
+  <img src="slides/slide_2.png" alt="Slide 2 — Problématique & Contexte" width="90%"><br><br>
+  <img src="slides/slide_3.png" alt="Slide 3 — Méthodologie" width="90%"><br><br>
+  <img src="slides/slide_4.png" alt="Slide 4 — Résultats" width="90%"><br><br>
+  <img src="slides/slide_5.png" alt="Slide 5 — Généralisation & Biais" width="90%"><br><br>
+  <img src="slides/slide_6.png" alt="Slide 6 — Conclusion & Prochaines Étapes" width="90%">
+</p>
+
+---
+
 ## 🗂️ Structure du projet
 
 ```
@@ -147,6 +160,8 @@ fake-news-detection/
 ├── README.md                       # Ce fichier (guide du projet)
 ├── requirements.txt                # Dépendances Python
 ├── fake_news_detection.ipynb       # Notebook principal (tout est dedans)
+├── slides/                         # Slides Follow-Up en images
+│   ├── slide_1.png ... slide_6.png
 ├── bert_results.json               # Résultats BERT sauvegardés (généré auto)
 └── best_bert_model.pt              # Poids du modèle BERT (généré auto)
 ```
