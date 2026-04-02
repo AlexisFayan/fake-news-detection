@@ -144,15 +144,11 @@ Si BERT a déjà été entraîné, les résultats sont sauvegardés dans `bert_r
 
 ```
 fake-news-detection/
-├── README.md                              # Ce fichier (guide du projet)
-├── requirements.txt                       # Dépendances Python
-├── fake_news_detection.ipynb              # Notebook principal (tout est dedans)
-├── Follow-Up_Fake_News_Detection.pdf      # Présentation Follow-Up (PDF)
-├── Follow-Up_Fake_News_Detection.pptx     # Présentation Follow-Up (PowerPoint)
-├── slides/                                # Slides en images (pour affichage GitHub)
-│   ├── slide_1.png ... slide_6.png
-├── bert_results.json                      # Résultats BERT sauvegardés (généré auto)
-└── best_bert_model.pt                     # Poids du modèle BERT (généré auto)
+├── README.md                       # Ce fichier (guide du projet)
+├── requirements.txt                # Dépendances Python
+├── fake_news_detection.ipynb       # Notebook principal (tout est dedans)
+├── bert_results.json               # Résultats BERT sauvegardés (généré auto)
+└── best_bert_model.pt              # Poids du modèle BERT (généré auto)
 ```
 
 ---
@@ -163,21 +159,6 @@ fake-news-detection/
 |------|-----------|
 | **3 avril 2026** | Follow-up (Groupe 2 : 11h00) |
 | **17 avril 2026** | Soutenance (Groupe 2 : 14h30) |
-
----
-
-## 📊 Présentation Follow-Up
-
-> **[📥 Télécharger le PDF](Follow-Up_Fake_News_Detection.pdf)** · **[📥 Télécharger le PPTX](Follow-Up_Fake_News_Detection.pptx)**
-
-<p align="center">
-  <img src="slides/slide_1.png" alt="Slide 1 — Titre" width="90%"><br><br>
-  <img src="slides/slide_2.png" alt="Slide 2 — Problématique & Contexte" width="90%"><br><br>
-  <img src="slides/slide_3.png" alt="Slide 3 — Méthodologie" width="90%"><br><br>
-  <img src="slides/slide_4.png" alt="Slide 4 — Résultats" width="90%"><br><br>
-  <img src="slides/slide_5.png" alt="Slide 5 — Généralisation & Biais" width="90%"><br><br>
-  <img src="slides/slide_6.png" alt="Slide 6 — Conclusion & Prochaines Étapes" width="90%">
-</p>
 
 ---
 
