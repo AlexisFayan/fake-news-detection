@@ -1,0 +1,13 @@
+# Raw and processed data files — do not commit (can be large)
+data/
+*.csv
+*.tsv
+*.json
+
+# Log files
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

@@ -1,0 +1,17 @@
+# Scraping pipeline — Fake News Detection project
+# Install: pip install -r scraping/requirements.txt
+
+# HTTP & HTML parsing
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0           # faster HTML parser for BeautifulSoup
+
+# Data manipulation
+pandas>=2.0.0
+numpy>=1.24.0
+
+# NLP preprocessing (mirrors main requirements.txt)
+nltk>=3.8.0
+
+# Progress bars
+tqdm>=4.66.0
