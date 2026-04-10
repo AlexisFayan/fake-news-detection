@@ -7,16 +7,27 @@ and saves them to CSV for enriching the LIAR dataset.
 Usage:
     python politifact_scraper.py --pages 50
     python politifact_scraper.py --pages 100 --output data/politifact_raw.csv
-    python politifact_scraper.py --pages 50 --fetch-details  # slower, adds party/context
+    python politifact_scraper.py --pages 50 --fetch-details  # slower, adds subjects + speaker_job
 
 Output CSV columns:
     url, statement, speaker, speaker_job, party_affiliation,
     ruling, date, context, subject, source
+
+HTML structure notes (verified April 2026):
+  List page card  → article.m-statement
+    a.m-statement__name         → speaker name
+    div.m-statement__desc       → "stated on {Month D, YYYY} {context}:"
+    div.m-statement__quote a    → statement text + URL
+    div.m-statement__meter img  → ruling (alt attribute)
+    footer.m-statement__footer  → "By {PolitiFact author} • {pub date}" (NOT speaker job)
+  Article page  → ul.m-list--horizontal a.c-tag  → subject tags (excl. personality links)
+  Personality page → div.m-pageheader__body p    → bio text (contains speaker job)
 """
 
 import argparse
 import csv
 import logging
+import re
 import sys
 import time
 import urllib.robotparser
@@ -171,23 +182,22 @@ def parse_list_card(card) -> dict:
     """
     Parse a single fact-check card from the /factchecks/ list page.
 
-    PolitiFact list page structure (2024):
-      <article class="m-statement ...">
-        <div class="m-statement__quote"><a href="...">statement</a></div>
-        <footer class="m-statement__footer">
-          <div class="m-statement__meta">
-            <a href="/personalities/.../">Speaker</a>  •  job title  •  date
-          </div>
-          <div class="m-statement__tags"><a>tag1</a> <a>tag2</a></div>
-        </footer>
-        <div class="m-statement__ruling"><img alt="ruling" …/></div>
-      </article>
+    Verified HTML structure (April 2026):
+      article.m-statement
+        div.m-statement__meta
+          a.m-statement__name          → speaker name
+          div.m-statement__desc        → "stated on {Month D, YYYY} {context}:"
+        div.m-statement__quote
+          a[href]                      → statement text + URL
+        div.m-statement__meter
+          img[alt]                     → ruling label
+        footer.m-statement__footer     → "By {author} • {pub_date}"  (NOT speaker job)
     """
     record: dict = {col: "" for col in OUTPUT_COLUMNS}
     record["source"] = "politifact_scraped"
 
     # --- Statement & URL ---
-    quote_div = card.find(class_=lambda c: c and "statement__quote" in c)
+    quote_div = card.find(class_="m-statement__quote")
     if quote_div:
         link = quote_div.find("a")
         if link:
@@ -195,89 +205,81 @@ def parse_list_card(card) -> dict:
             href = link.get("href", "")
             record["url"] = BASE_URL + href if href.startswith("/") else href
 
-    # --- Meta block: speaker, job, date ---
-    meta_div = card.find(class_=lambda c: c and "statement__meta" in c)
-    if meta_div:
-        speaker_link = meta_div.find("a")
-        if speaker_link:
-            record["speaker"] = _text(speaker_link)
+    # --- Speaker ---
+    speaker_link = card.find("a", class_="m-statement__name")
+    if speaker_link:
+        record["speaker"] = speaker_link.get_text(strip=True)
 
-        # Remaining text after speaker link = job title and date
-        meta_text = _text(meta_div)
-        speaker_name = record["speaker"]
-        remainder = meta_text.replace(speaker_name, "", 1).strip(" •·–-\n")
-
-        # Date is usually the last part after a separator
-        parts = [p.strip() for p in remainder.split("•") if p.strip()]
-        if len(parts) >= 2:
-            record["speaker_job"] = parts[0]
-            record["date"] = parts[-1]
-        elif len(parts) == 1:
-            # Could be job or date — heuristic: if it contains digits assume date
-            if any(ch.isdigit() for ch in parts[0]):
-                record["date"] = parts[0]
-            else:
-                record["speaker_job"] = parts[0]
-
-    # Fallback: look for explicit date element
-    if not record["date"]:
-        date_el = card.find(class_=lambda c: c and ("date" in c or "time" in c))
-        if date_el:
-            record["date"] = _text(date_el)
-        time_el = card.find("time")
-        if time_el:
-            record["date"] = time_el.get("datetime", _text(time_el))
+    # --- Date + Context from m-statement__desc ---
+    # Format: "stated on {Month D, YYYY} {context}:"
+    desc_el = card.find(class_="m-statement__desc")
+    if desc_el:
+        desc = desc_el.get_text(separator=" ", strip=True)
+        # Extract date (Month D, YYYY) and context (everything after)
+        m = re.match(
+            r'stated on\s+(\w+\s+\d+,\s+\d{4})\s+(.*?):\s*$',
+            desc, re.IGNORECASE
+        )
+        if m:
+            record["date"]    = m.group(1).strip()   # e.g. "April 6, 2026"
+            record["context"] = m.group(2).strip()   # e.g. "in social media posts"
+        else:
+            # Fallback: pull any "Month D, YYYY" pattern
+            date_m = re.search(r'(\w+\s+\d+,\s+\d{4})', desc)
+            if date_m:
+                record["date"] = date_m.group(1)
+            record["context"] = desc  # store full desc as context if regex fails
 
     # --- Ruling ---
     record["ruling"] = parse_ruling(card)
 
-    # --- Subject / Tags ---
-    tags_div = card.find(class_=lambda c: c and ("tags" in c or "subjects" in c))
-    if tags_div:
-        tags = [_text(a) for a in tags_div.find_all("a") if _text(a)]
-        record["subject"] = ", ".join(tags)
-
+    # subject and speaker_job are only available via --fetch-details
     return record
 
 
-def parse_article_details(soup: BeautifulSoup) -> dict:
+def parse_article_details(session: requests.Session, article_url: str, speaker_link: str) -> dict:
     """
-    Extract additional fields from an individual fact-check article page.
-    Returns a dict with keys: party_affiliation, context, speaker_job (if better).
+    Fetch an individual article page and its speaker personality page to extract:
+      - subject  : topic tags (from ul.m-list--horizontal a.c-tag, excl. personality links)
+      - speaker_job : first sentence of speaker bio on personality page
+
+    party_affiliation is not available in structured form on PolitiFact — left empty.
     """
     details: dict = {}
 
-    # --- Party affiliation ---
-    # Usually in a "party" span or next to the speaker name
-    party_el = soup.find(class_=lambda c: c and "party" in c.lower())
-    if party_el:
-        details["party_affiliation"] = _text(party_el)
+    # --- Article page: subject tags ---
+    soup = fetch_page(session, article_url)
+    if soup:
+        tags_list = soup.find("ul", class_="m-list--horizontal")
+        if tags_list:
+            subjects = []
+            for a in tags_list.find_all("a", class_="c-tag"):
+                href = a.get("href", "")
+                if "/personalities/" in href:
+                    continue   # skip speaker self-tag
+                label = a.get("title") or a.get_text(strip=True)
+                if label:
+                    subjects.append(label)
+            if subjects:
+                details["subject"] = ", ".join(subjects)
 
-    # Also check meta description spans for "Democrat", "Republican", etc.
-    if not details.get("party_affiliation"):
-        for span in soup.find_all("span"):
-            text = _text(span).lower()
-            for party in ("democrat", "republican", "independent", "libertarian", "green"):
-                if text == party:
-                    details["party_affiliation"] = text
-                    break
-
-    # --- Context ---
-    # Context appears in the article intro or a dedicated field
-    context_el = soup.find(class_=lambda c: c and "context" in c.lower())
-    if context_el:
-        details["context"] = _text(context_el)
-
-    if not details.get("context"):
-        # Heuristic: look for "in a tweet", "in a speech", "on Facebook" etc.
-        intro_el = soup.find(class_=lambda c: c and ("intro" in c or "short" in c))
-        if intro_el:
-            details["context"] = _text(intro_el)
-
-    # --- Speaker job (may be more complete on article page) ---
-    job_el = soup.find(class_=lambda c: c and ("job" in c or "title" in c))
-    if job_el:
-        details["speaker_job"] = _text(job_el)
+    # --- Personality page: speaker job ---
+    if speaker_link:
+        personality_url = (
+            BASE_URL + speaker_link if speaker_link.startswith("/") else speaker_link
+        )
+        time.sleep(REQUEST_DELAY)
+        psoup = fetch_page(session, personality_url)
+        if psoup:
+            bio_el = psoup.find(class_="m-pageheader__body")
+            if bio_el:
+                bio_p = bio_el.find("p")
+                if bio_p:
+                    bio_text = bio_p.get_text(strip=True)
+                    # Bio is "Name is the {job title}." — extract everything after "is "
+                    job_m = re.search(r'\bis\s+(?:the\s+|an?\s+)?(.+?)(?:\s+and\b|\.|,|$)', bio_text, re.IGNORECASE)
+                    if job_m:
+                        details["speaker_job"] = job_m.group(1).strip()
 
     return details
 
@@ -295,10 +297,6 @@ def scrape_page(session: requests.Session, page_num: int, fetch_details: bool) -
 
     cards = soup.find_all("article", class_=lambda c: c and "m-statement" in c)
     if not cards:
-        # Fallback: any article element
-        cards = soup.find_all("article")
-
-    if not cards:
         log.info("No fact-check cards found on page %d — likely end of data.", page_num)
         return []
 
@@ -306,14 +304,15 @@ def scrape_page(session: requests.Session, page_num: int, fetch_details: bool) -
     for card in cards:
         record = parse_list_card(card)
         if not record["statement"]:
-            continue  # skip empty cards
+            continue  # skip empty/malformed cards
 
         if fetch_details and record["url"]:
+            # Grab speaker personality href for job extraction
+            speaker_a = card.find("a", class_="m-statement__name")
+            speaker_href = speaker_a.get("href", "") if speaker_a else ""
             time.sleep(REQUEST_DELAY)
-            article_soup = fetch_page(session, record["url"])
-            if article_soup:
-                details = parse_article_details(article_soup)
-                record.update({k: v for k, v in details.items() if v})
+            details = parse_article_details(session, record["url"], speaker_href)
+            record.update({k: v for k, v in details.items() if v})
 
         records.append(record)
 
@@ -326,7 +325,8 @@ def save_csv(records: list[dict], output_path: Path, mode: str = "w") -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     write_header = mode == "w" or not output_path.exists()
     with open(output_path, mode, newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=OUTPUT_COLUMNS + ["source"])
+        # OUTPUT_COLUMNS already includes "source" — do not append it again
+        writer = csv.DictWriter(f, fieldnames=OUTPUT_COLUMNS)
         if write_header:
             writer.writeheader()
         writer.writerows(records)

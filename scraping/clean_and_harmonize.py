@@ -52,16 +52,26 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def ensure_nltk_resources() -> None:
+    # macOS ships without the system CA bundle wired into Python — work around it.
+    import ssl
+    try:
+        ssl._create_default_https_context = ssl._create_unverified_context
+    except AttributeError:
+        pass
+
     for resource, path in [
-        ("stopwords",   "corpora/stopwords"),
-        ("wordnet",     "corpora/wordnet"),
-        ("omw-1.4",     "corpora/omw-1.4"),
+        ("stopwords", "corpora/stopwords"),
+        ("wordnet",   "corpora/wordnet"),
+        ("omw-1.4",   "corpora/omw-1.4"),
     ]:
         try:
             nltk.data.find(path)
         except LookupError:
             log.info("Downloading NLTK resource: %s", resource)
-            nltk.download(resource, quiet=True)
+            try:
+                nltk.download(resource, quiet=True)
+            except Exception as exc:
+                log.warning("Could not download %s (%s) — continuing anyway.", resource, exc)
 
 
 # ---------------------------------------------------------------------------
